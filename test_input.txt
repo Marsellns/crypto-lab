@@ -1,0 +1,6 @@
+TestCipher
+mykey123
+CBC
+8
+1
+kamucantik
