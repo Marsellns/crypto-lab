@@ -121,6 +121,46 @@ int cbc_dec(unsigned char*ct,int len,unsigned char rk[][8],int R,unsigned char*o
     return pkcs_unpad(out,ol);
 }
 
+// ── CFB encrypt/decrypt (byte-oriented) ──────────────────────
+int cfb_enc(unsigned char*pt,int len,unsigned char rk[][8],int R,unsigned char*out){
+    unsigned char iv[8]; rand_iv(iv);
+    memcpy(out,iv,8); int ol=8;
+    unsigned char reg[8]; memcpy(reg, iv, 8);
+
+    for(int i=0;i<len;i++){
+        unsigned char keystream[8]; memcpy(keystream, reg, 8);
+        enc_block(keystream, rk, R);
+
+        unsigned char c = pt[i] ^ keystream[0];
+        out[ol++] = c;
+
+        // shift register left by 1 byte, append ciphertext
+        memmove(reg, reg+1, 7);
+        reg[7] = c;
+    }
+
+    return ol;
+}
+
+int cfb_dec(unsigned char*ct,int len,unsigned char rk[][8],int R,unsigned char*out){
+    unsigned char reg[8]; memcpy(reg, ct, 8);
+    int ol=0;
+
+    for(int i=8;i<len;i++){
+        unsigned char keystream[8]; memcpy(keystream, reg, 8);
+        enc_block(keystream, rk, R);
+
+        unsigned char p = ct[i] ^ keystream[0];
+        out[ol++] = p;
+
+        // shift register left by 1 byte, append ciphertext
+        memmove(reg, reg+1, 7);
+        reg[7] = ct[i];
+    }
+
+    return ol;
+}
+
 // ── Base64 ──────────────────────────────────────────────────
 static const char B64[]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 void b64enc(unsigned char*in,int len,char*out){
@@ -178,7 +218,12 @@ int main(){
         printf("\n  📝 Teks: "); fgets(text,sizeof(text),stdin);
         text[strcspn(text,"\n")]=0;
         int pt_len=strlen(text);
-        int ct_len=cbc_enc((unsigned char*)text,pt_len,rk,R,out);
+        int ct_len;
+        if(strcmp(mode, "CFB") == 0){
+            ct_len = cfb_enc((unsigned char*)text, pt_len, rk, R, out);
+        } else {
+            ct_len = cbc_enc((unsigned char*)text, pt_len, rk, R, out);
+        }
         b64enc(out,ct_len,b64buf);
         printf(GRY "\n  ┌─ CIPHERTEXT (%s) " RST "\n" GRY "  │ " GRN "%s.%s.%s\n" GRY "  └─────────────\n" RST,
                mode,name,mode,b64buf);
@@ -188,7 +233,12 @@ int main(){
         char*p1=strchr(text,'.'),*p2=p1?strchr(p1+1,'.'):NULL;
         char*b64=p2?p2+1:text;
         int ct_len=b64dec(b64,buf);
-        int pt_len=cbc_dec(buf,ct_len,rk,R,out);
+        int pt_len;
+        if(strcmp(mode, "CFB") == 0){
+            pt_len = cfb_dec(buf,ct_len,rk,R,out);
+        } else {
+            pt_len = cbc_dec(buf,ct_len,rk,R,out);
+        }
         out[pt_len]=0;
         printf(GRY "\n  ┌─ PLAINTEXT ──\n  │ " WHT "%s\n" GRY "  └─────────────\n" RST,out);
     }

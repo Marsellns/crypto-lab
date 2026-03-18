@@ -200,7 +200,7 @@ HTML_TEMPLATE = """
         <p class="subtitle">Enkripsi & Dekripsi Teks</p>
         
         <div class="info">
-            <strong>ℹ️ Cara Kerja:</strong> Program menggunakan algoritma CBC dengan substitusi, rotasi bit, dan diffusion
+            <strong>ℹ️ Cara Kerja:</strong> Program menggunakan algoritma CBC/CFB dengan substitusi, rotasi bit, dan diffusion
         </div>
 
         <form id="cipherForm">
